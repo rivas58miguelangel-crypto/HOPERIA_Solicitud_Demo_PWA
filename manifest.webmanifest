@@ -1,0 +1,16 @@
+﻿{
+  "name": "H-OperIA Inmobiliaria - Solicitud de Demostración",
+  "short_name": "H-OperIA Demo",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#FBFCFD",
+  "theme_color": "#020617",
+  "icons": [
+    {
+      "src": "icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ]
+}

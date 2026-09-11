@@ -1,0 +1,737 @@
+﻿<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#020617">
+<title>Solicitar demostración | H-OperIA Inmobiliaria</title>
+<link rel="manifest" href="manifest.webmanifest">
+
+<style>
+:root{
+  --admin:#020617;
+  --admin-soft:#0A1026;
+  --body:#FBFCFD;
+  --card:#FFFFFF;
+  --gold:#FCD34D;
+  --gold-soft:#FEF3C3;
+  --gold-border:#F4D97A;
+  --ink:#0F172A;
+  --ink-2:#24324A;
+  --muted:#667085;
+  --line:#E5EAF0;
+  --input:#F8FAFC;
+  --outer:#E5E5E5;
+  --shell-radius:38px;
+  --card-radius:26px;
+}
+
+*{box-sizing:border-box}
+
+html,body{
+  margin:0;
+  min-height:100%;
+  font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+}
+
+html{background:var(--outer)}
+
+body{
+  background:var(--outer);
+  color:var(--ink);
+}
+
+.device-frame{
+  min-height:100vh;
+  background:var(--body);
+  overflow:hidden;
+  position:relative;
+}
+
+.admin-header{
+  background:var(--admin);
+  color:#fff;
+  padding:max(20px,env(safe-area-inset-top)) 22px 24px;
+}
+
+.header-top{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:12px;
+}
+
+.brand-block{min-width:0}
+
+.brand-line{
+  display:flex;
+  align-items:center;
+  gap:14px;
+  font-weight:900;
+  font-size:20px;
+  line-height:1;
+  letter-spacing:-.25px;
+}
+
+.dots{
+  display:grid;
+  grid-template-columns:repeat(2,9px);
+  gap:7px;
+  flex:0 0 auto;
+}
+
+.dots i{
+  width:9px;
+  height:9px;
+  border:1.8px solid var(--gold);
+  border-radius:50%;
+  display:block;
+}
+
+.brand-sub{
+  margin:5px 0 0 49px;
+  color:#D8DEEA;
+  font-size:9px;
+  line-height:1.25;
+  font-weight:600;
+}
+
+.step{
+  flex:0 0 auto;
+  background:#1A2034;
+  border:1px solid #30384F;
+  color:#fff;
+  border-radius:999px;
+  padding:11px 14px;
+  font-size:10px;
+  font-weight:900;
+}
+
+.scenario{
+  margin:12px 0 0 49px;
+  color:var(--gold);
+  font-size:11px;
+  font-weight:900;
+}
+
+.progress{
+  margin-top:24px;
+  height:8px;
+  background:#292E43;
+  border-radius:999px;
+  overflow:hidden;
+}
+
+.progress span{
+  display:block;
+  width:16%;
+  height:100%;
+  background:var(--gold);
+  border-radius:999px;
+}
+
+.content{
+  background:var(--body);
+  padding:28px 18px 40px;
+}
+
+.kicker{
+  display:inline-block;
+  padding:9px 13px;
+  border-radius:999px;
+  background:var(--gold-soft);
+  border:1px solid var(--gold-border);
+  color:#A66D12;
+  font-size:10px;
+  font-weight:900;
+  letter-spacing:.65px;
+}
+
+.presenter{
+  margin-top:13px;
+  text-transform:uppercase;
+  letter-spacing:.85px;
+  font-size:12px;
+  font-weight:900;
+  color:#16233A;
+}
+
+.project{
+  margin-top:8px;
+  color:#111827;
+  font-size:21px;
+  font-weight:900;
+}
+
+h1{
+  margin:28px 0 12px;
+  font-size:clamp(35px,9vw,50px);
+  line-height:.95;
+  letter-spacing:-1.7px;
+  text-transform:uppercase;
+  color:#07101F;
+}
+
+.lead{
+  margin:0;
+  color:#48566B;
+  font-size:17px;
+  line-height:1.48;
+  font-weight:650;
+}
+
+.form-card{
+  margin-top:26px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:var(--card-radius);
+  padding:27px 24px;
+  box-shadow:0 2px 10px rgba(2,6,23,.035);
+}
+
+.form-intro{
+  margin:0 0 24px;
+  font-size:17px;
+  line-height:1.48;
+  color:#1F2937;
+  font-weight:760;
+}
+
+.section + .section{
+  margin-top:26px;
+  padding-top:23px;
+  border-top:1px solid #EEF2F6;
+}
+
+.section-title{
+  margin:0 0 5px;
+  font-size:16px;
+  font-weight:900;
+}
+
+.section-note{
+  margin:0 0 15px;
+  color:#7A8190;
+  font-size:12px;
+}
+
+.grid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:15px;
+}
+
+label{
+  display:block;
+  margin-bottom:7px;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.65px;
+  text-transform:uppercase;
+  color:#445065;
+}
+
+.optional{
+  color:#A0A6B1;
+  font-weight:700;
+  text-transform:none;
+  letter-spacing:0;
+}
+
+input,textarea{
+  width:100%;
+  border:1px solid #E4E9EF;
+  background:var(--input);
+  color:#111827;
+  border-radius:15px;
+  min-height:52px;
+  padding:14px 15px;
+  font:inherit;
+  font-size:16px;
+  outline:none;
+}
+
+textarea{
+  min-height:108px;
+  resize:vertical;
+}
+
+input:focus,textarea:focus{
+  background:#fff;
+  border-color:#E4BE3A;
+  box-shadow:0 0 0 3px rgba(252,211,77,.16);
+}
+
+.consent{
+  display:flex;
+  align-items:flex-start;
+  gap:10px;
+  margin-top:17px;
+  padding:13px;
+  border:1px solid #F0E1A4;
+  background:#FFFBEA;
+  border-radius:14px;
+  color:#667085;
+  font-size:12px;
+  line-height:1.45;
+  text-transform:none;
+  letter-spacing:0;
+  font-weight:500;
+}
+
+.consent input{
+  width:18px;
+  height:18px;
+  min-height:0;
+  margin:1px 0 0;
+  accent-color:var(--gold);
+}
+
+.cta{
+  width:100%;
+  min-height:55px;
+  margin-top:18px;
+  border:0;
+  border-radius:15px;
+  background:var(--admin);
+  color:#fff;
+  font-size:14px;
+  font-weight:900;
+  cursor:pointer;
+}
+
+.after{
+  margin-top:18px;
+  background:#fff;
+  border:1px solid var(--line);
+  border-radius:24px;
+  padding:20px;
+}
+
+.after h2{
+  margin:0 0 13px;
+  font-size:18px;
+}
+
+.after-grid{
+  display:grid;
+  gap:10px;
+}
+
+.after-item{
+  padding:14px;
+  border:1px solid #E9EDF2;
+  border-radius:15px;
+  background:#FBFCFD;
+}
+
+.after-item:nth-child(2){background:#FAF5F8}
+.after-item:nth-child(3){background:#FFF9E6}
+
+.after-item strong{
+  display:block;
+  font-size:13px;
+  margin-bottom:4px;
+}
+
+.after-item span{
+  display:block;
+  color:#707784;
+  font-size:12px;
+  line-height:1.4;
+}
+
+.signature{
+  margin-top:18px;
+  background:var(--admin);
+  color:#fff;
+  border-radius:20px;
+  padding:17px 18px;
+  font-size:13px;
+  line-height:1.55;
+}
+
+.signature .gold{
+  color:var(--gold);
+  font-weight:900;
+}
+
+.status{
+  display:none;
+  margin-top:12px;
+  padding:12px 13px;
+  border-radius:12px;
+  font-size:12px;
+}
+
+.status.error{
+  display:block;
+  background:#FFF0ED;
+  border:1px solid #F2C8C0;
+  color:#8C2D1F;
+}
+
+.status.ok{
+  display:block;
+  background:#EDF8F1;
+  border:1px solid #C8E7D3;
+  color:#245A37;
+}
+
+.footer{
+  text-align:center;
+  color:#7B8190;
+  font-size:11px;
+  padding:16px 10px calc(24px + env(safe-area-inset-bottom));
+}
+
+@media(max-width:699px){
+  body{background:var(--body)}
+
+  .device-frame{
+    width:100%;
+    min-height:100dvh;
+    border-radius:0;
+  }
+
+  .admin-header{
+    position:sticky;
+    top:0;
+    z-index:20;
+  }
+}
+
+@media(min-width:700px){
+  body{padding:30px}
+
+  .device-frame{
+    max-width:520px;
+    margin:0 auto;
+    min-height:calc(100vh - 60px);
+    border-radius:var(--shell-radius);
+    box-shadow:0 22px 65px rgba(2,6,23,.22);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="device-frame">
+
+<header class="admin-header">
+
+<div class="header-top">
+
+<div class="brand-block">
+
+<div class="brand-line">
+<span class="dots">
+<i></i><i></i><i></i><i></i>
+</span>
+
+<span>Suite H - OperIA</span>
+</div>
+
+<div class="brand-sub">
+Humanización de las operaciones con inteligencia artificial.
+</div>
+
+<div class="scenario">
+ESCENARIO COMERCIAL GUIADO
+</div>
+
+</div>
+
+<div class="step">
+SOLICITUD DE DEMO
+</div>
+
+</div>
+
+<div class="progress">
+<span></span>
+</div>
+
+</header>
+
+<main class="content">
+
+<span class="kicker">
+CENTRO DEMO · DATOS DEL PROSPECTO
+</span>
+
+<div class="presenter">
+H-OperIA Inmobiliaria presenta
+</div>
+
+<div class="project">
+Solicitud de demostración
+</div>
+
+<h1>
+Conozcamos su proyecto
+</h1>
+
+<p class="lead">
+Compártanos algunos datos básicos para preparar una demostración de H-OperIA Inmobiliaria enfocada en su empresa y sus proyectos.
+</p>
+
+<form id="leadForm" class="form-card">
+
+<p class="form-intro">
+Complete la información para que podamos comprender mejor su contexto y contactarle por correo electrónico.
+</p>
+
+<section class="section">
+
+<h2 class="section-title">
+Datos de contacto
+</h2>
+
+<p class="section-note">
+Los campos marcados con * son necesarios.
+</p>
+
+<div class="grid">
+
+<div>
+<label for="nombre">Nombre del contacto *</label>
+<input id="nombre" name="nombre" required autocomplete="name" placeholder="Ej. Ana Martínez">
+</div>
+
+<div>
+<label for="cargo">
+Cargo <span class="optional">opcional</span>
+</label>
+<input id="cargo" name="cargo" autocomplete="organization-title" placeholder="Ej. Director Comercial">
+</div>
+
+<div>
+<label for="empresa">Empresa *</label>
+<input id="empresa" name="empresa" required autocomplete="organization" placeholder="Inmobiliaria o constructora">
+</div>
+
+<div>
+<label for="email">Correo electrónico *</label>
+<input id="email" name="email" type="email" required autocomplete="email" placeholder="nombre@empresa.com">
+</div>
+
+<div>
+<label for="whatsapp">WhatsApp *</label>
+<input id="whatsapp" name="whatsapp" required autocomplete="tel" inputmode="tel" placeholder="+503 7000 0000">
+</div>
+
+<div>
+<label for="telefono">
+Teléfono <span class="optional">opcional</span>
+</label>
+<input id="telefono" name="telefono" autocomplete="tel" inputmode="tel" placeholder="+503 2200 0000">
+</div>
+
+</div>
+</section>
+
+<section class="section">
+
+<h2 class="section-title">
+Proyecto o proyectos
+</h2>
+
+<p class="section-note">
+Solo necesitamos la información suficiente para orientar la demostración.
+</p>
+
+<div class="grid">
+
+<div>
+<label for="proyectos">
+Nombre del proyecto o proyectos *
+</label>
+
+<textarea id="proyectos" name="proyectos" required placeholder="Ej. Residencial Los Pinos, Torre Central..."></textarea>
+</div>
+
+<div>
+
+<label for="web">
+Enlaces de las páginas web del proyecto o proyectos
+<span class="optional">opcional</span>
+</label>
+
+<textarea id="web" name="web" inputmode="url" placeholder="Pegue uno o varios enlaces, uno por línea."></textarea>
+
+</div>
+
+<div>
+
+<label for="necesidad">
+¿Qué le gustaría gestionar mejor?
+<span class="optional">opcional</span>
+</label>
+
+<textarea id="necesidad" name="necesidad" placeholder="Ventas, reservas, cobros, servicio al cliente, coordinación entre áreas, información para Dirección..."></textarea>
+
+</div>
+
+</div>
+
+<label class="consent">
+
+<input type="checkbox" id="consentimiento" required>
+
+<span>
+Autorizo a H-OperIA a utilizar estos datos únicamente para contactarme por correo electrónico en relación con esta solicitud y preparar una demostración del demo H-OperIA Inmobiliaria.
+</span>
+
+</label>
+
+<button class="cta" type="submit">
+SOLICITAR DEMOSTRACIÓN
+</button>
+
+<div id="status" class="status"></div>
+
+</section>
+
+</form>
+
+<section class="after">
+
+<h2>
+¿Qué ocurrirá después?
+</h2>
+
+<div class="after-grid">
+
+<div class="after-item">
+<strong>1. Recibimos su solicitud</strong>
+<span>
+Registramos su información de contacto y los datos básicos de su empresa y proyecto.
+</span>
+</div>
+
+<div class="after-item">
+<strong>2. Entendemos su contexto</strong>
+<span>
+Revisamos los proyectos y el área que desea gestionar mejor.
+</span>
+</div>
+
+<div class="after-item">
+<strong>3. Coordinamos la demo</strong>
+<span>
+Le contactamos por correo electrónico para programar un espacio y presentarle el demo completo.
+</span>
+</div>
+
+</div>
+
+</section>
+
+<div class="signature">
+
+<strong>Miguel Ángel Rivas</strong><br>
+(503) 7576-2213<br>
+
+<span class="gold">
+H-OperIA
+</span><br>
+
+Humanización de las Operaciones con Inteligencia Artificial
+
+</div>
+
+</main>
+
+<div class="footer">
+H-OperIA · Solicitud de demostración
+</div>
+
+</div>
+
+<script>
+
+const FORM_ENDPOINT = "";
+
+const form = document.getElementById("leadForm");
+const statusBox = document.getElementById("status");
+
+form.addEventListener("submit", async (ev) => {
+
+  ev.preventDefault();
+
+  if(!form.checkValidity()){
+    form.reportValidity();
+    return;
+  }
+
+  const data = Object.fromEntries(new FormData(form).entries());
+
+  data.fecha = new Date().toISOString();
+
+  data.origen =
+    new URLSearchParams(location.search).get("origen")
+    || "landing-directa";
+
+  data.canal_contacto = "correo";
+
+  if(!FORM_ENDPOINT){
+
+    statusBox.className = "status error";
+
+    statusBox.textContent =
+      "La interfaz está lista. Falta conectar el endpoint de recepción antes de publicarla como formulario operativo.";
+
+    return;
+  }
+
+  try{
+
+    const r = await fetch(
+      FORM_ENDPOINT,
+      {
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify(data)
+      }
+    );
+
+    if(!r.ok){
+      throw new Error("HTTP " + r.status);
+    }
+
+    form.reset();
+
+    statusBox.className = "status ok";
+
+    statusBox.textContent =
+      "Gracias. Hemos recibido su solicitud. Le contactaremos por correo electrónico.";
+
+  }
+  catch(err){
+
+    statusBox.className = "status error";
+
+    statusBox.textContent =
+      "No pudimos enviar la solicitud. Por favor, inténtelo nuevamente.";
+
+  }
+
+});
+
+if("serviceWorker" in navigator){
+
+  window.addEventListener(
+    "load",
+    () => navigator.serviceWorker.register("./sw.js").catch(()=>{})
+  );
+
+}
+
+</script>
+
+</body>
+</html>

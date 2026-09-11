@@ -1,0 +1,28 @@
+﻿<svg xmlns="http://www.w3.org/2000/svg"
+     viewBox="0 0 512 512">
+
+  <rect width="512"
+        height="512"
+        rx="92"
+        fill="#020617"/>
+
+  <rect x="58"
+        y="58"
+        width="396"
+        height="396"
+        rx="72"
+        fill="none"
+        stroke="#FCD34D"
+        stroke-width="18"/>
+
+  <text x="256"
+        y="320"
+        text-anchor="middle"
+        font-family="Arial, Helvetica, sans-serif"
+        font-size="185"
+        font-weight="700"
+        fill="#FCD34D">
+    H+
+  </text>
+
+</svg>
