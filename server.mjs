@@ -1,0 +1,262 @@
+﻿import http from "node:http";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+const PORT = Number(process.env.PORT || 4173);
+const DATA_DIR = path.join(__dirname, "data");
+const LEADS_FILE = path.join(DATA_DIR, "leads.ndjson");
+
+fs.mkdirSync(DATA_DIR, { recursive: true });
+
+const MIME_TYPES = {
+  ".html": "text/html; charset=utf-8",
+  ".js": "text/javascript; charset=utf-8",
+  ".css": "text/css; charset=utf-8",
+  ".json": "application/json; charset=utf-8",
+  ".webmanifest": "application/manifest+json; charset=utf-8",
+  ".svg": "image/svg+xml",
+  ".png": "image/png",
+  ".jpg": "image/jpeg",
+  ".jpeg": "image/jpeg",
+  ".ico": "image/x-icon"
+};
+
+function sendJson(res, statusCode, payload) {
+  res.writeHead(statusCode, {
+    "Content-Type": "application/json; charset=utf-8",
+    "Cache-Control": "no-store"
+  });
+
+  res.end(JSON.stringify(payload));
+}
+
+function clean(value, maxLength = 2000) {
+  if (typeof value !== "string") return "";
+  return value.trim().slice(0, maxLength);
+}
+
+function isValidEmail(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function validateLead(body) {
+  const lead = {
+    nombre: clean(body.nombre, 150),
+    cargo: clean(body.cargo, 150),
+    empresa: clean(body.empresa, 200),
+    email: clean(body.email, 254).toLowerCase(),
+    whatsapp: clean(body.whatsapp, 80),
+    telefono: clean(body.telefono, 80),
+    proyectos: clean(body.proyectos, 4000),
+    web: clean(body.web, 4000),
+    necesidad: clean(body.necesidad, 5000),
+    origen: clean(body.origen, 150) || "landing-directa",
+    canal_contacto: "correo"
+  };
+
+  const errores = [];
+
+  if (!lead.nombre) errores.push("Nombre del contacto");
+  if (!lead.empresa) errores.push("Empresa");
+  if (!lead.email || !isValidEmail(lead.email)) errores.push("Correo electrónico válido");
+  if (!lead.whatsapp) errores.push("WhatsApp");
+  if (!lead.proyectos) errores.push("Nombre del proyecto o proyectos");
+
+  return { lead, errores };
+}
+
+async function readJsonBody(req) {
+  return await new Promise((resolve, reject) => {
+    let body = "";
+    let received = 0;
+    const MAX_BYTES = 64 * 1024;
+
+    req.on("data", chunk => {
+      received += chunk.length;
+
+      if (received > MAX_BYTES) {
+        reject(new Error("PAYLOAD_TOO_LARGE"));
+        req.destroy();
+        return;
+      }
+
+      body += chunk;
+    });
+
+    req.on("end", () => {
+      try {
+        resolve(JSON.parse(body || "{}"));
+      } catch {
+        reject(new Error("INVALID_JSON"));
+      }
+    });
+
+    req.on("error", reject);
+  });
+}
+
+function saveLead(lead, req) {
+  const record = {
+    id: `HOP-LEAD-${Date.now()}-${Math.random().toString(36).slice(2, 8).toUpperCase()}`,
+    recibidoEn: new Date().toISOString(),
+    ip:
+      clean(req.headers["x-forwarded-for"] || "", 200)
+        .split(",")[0]
+        .trim() ||
+      req.socket.remoteAddress ||
+      "",
+    userAgent: clean(req.headers["user-agent"] || "", 500),
+    ...lead
+  };
+
+  fs.appendFileSync(
+    LEADS_FILE,
+    JSON.stringify(record) + "\n",
+    { encoding: "utf8", mode: 0o600 }
+  );
+
+  return record;
+}
+
+function serveStatic(req, res) {
+  let pathname;
+
+  try {
+    pathname = decodeURIComponent(new URL(req.url, "http://localhost").pathname);
+  } catch {
+    res.writeHead(400);
+    res.end("Solicitud inválida");
+    return;
+  }
+
+  if (pathname === "/") pathname = "/index.html";
+
+  const requestedPath = path.resolve(
+    __dirname,
+    "." + pathname
+  );
+
+  if (!requestedPath.startsWith(__dirname)) {
+    res.writeHead(403);
+    res.end("Acceso denegado");
+    return;
+  }
+
+  if (
+    requestedPath.includes(path.sep + "data" + path.sep) ||
+    requestedPath.endsWith(path.sep + "data")
+  ) {
+    res.writeHead(404);
+    res.end("No encontrado");
+    return;
+  }
+
+  fs.stat(requestedPath, (err, stat) => {
+    if (err || !stat.isFile()) {
+      res.writeHead(404, {
+        "Content-Type": "text/plain; charset=utf-8"
+      });
+      res.end("No encontrado");
+      return;
+    }
+
+    const ext = path.extname(requestedPath).toLowerCase();
+
+    res.writeHead(200, {
+      "Content-Type": MIME_TYPES[ext] || "application/octet-stream",
+      "X-Content-Type-Options": "nosniff"
+    });
+
+    fs.createReadStream(requestedPath).pipe(res);
+  });
+}
+
+const server = http.createServer(async (req, res) => {
+  const url = new URL(req.url, "http://localhost");
+
+  if (req.method === "GET" && url.pathname === "/api/health") {
+    sendJson(res, 200, {
+      ok: true,
+      servicio: "HOPERIA_Solicitud_Demo_PWA"
+    });
+    return;
+  }
+
+  if (req.method === "POST" && url.pathname === "/api/leads") {
+    try {
+      const body = await readJsonBody(req);
+      const { lead, errores } = validateLead(body);
+
+      if (errores.length) {
+        sendJson(res, 400, {
+          ok: false,
+          error: "Faltan datos requeridos.",
+          campos: errores
+        });
+        return;
+      }
+
+      const record = saveLead(lead, req);
+
+      console.log(
+        `[LEAD] ${record.recibidoEn} | ${record.id} | ${record.empresa} | ${record.email}`
+      );
+
+      sendJson(res, 201, {
+        ok: true,
+        id: record.id
+      });
+
+    } catch (error) {
+      if (error.message === "PAYLOAD_TOO_LARGE") {
+        sendJson(res, 413, {
+          ok: false,
+          error: "Solicitud demasiado grande."
+        });
+        return;
+      }
+
+      if (error.message === "INVALID_JSON") {
+        sendJson(res, 400, {
+          ok: false,
+          error: "Formato de solicitud inválido."
+        });
+        return;
+      }
+
+      console.error(error);
+
+      sendJson(res, 500, {
+        ok: false,
+        error: "No fue posible registrar la solicitud."
+      });
+    }
+
+    return;
+  }
+
+  if (req.method === "GET") {
+    serveStatic(req, res);
+    return;
+  }
+
+  res.writeHead(405, {
+    "Content-Type": "text/plain; charset=utf-8",
+    "Allow": "GET, POST"
+  });
+
+  res.end("Método no permitido");
+});
+
+server.listen(PORT, "0.0.0.0", () => {
+  console.log("");
+  console.log("=== H-OPERIA SOLICITUD DEMO ===");
+  console.log(`Servidor: http://localhost:${PORT}`);
+  console.log(`Health:   http://localhost:${PORT}/api/health`);
+  console.log(`Leads:    ${LEADS_FILE}`);
+  console.log("");
+});
