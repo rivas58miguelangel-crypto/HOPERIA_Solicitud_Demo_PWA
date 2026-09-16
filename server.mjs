@@ -1,4 +1,4 @@
-﻿import http from "node:http";
+import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -9,6 +9,14 @@ const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 4173);
 const DATA_DIR = path.join(__dirname, "data");
 const LEADS_FILE = path.join(DATA_DIR, "leads.ndjson");
+
+const ELASTIC_EMAIL_API_KEY = process.env.ELASTIC_EMAIL_API_KEY || "";
+const ELASTIC_EMAIL_FROM = process.env.ELASTIC_EMAIL_FROM || "";
+const ELASTIC_EMAIL_TO = process.env.ELASTIC_EMAIL_TO || "";
+const ELASTIC_EMAIL_FROM_NAME =
+  process.env.ELASTIC_EMAIL_FROM_NAME || "H-OperIA Inmobiliaria";
+const ELASTIC_EMAIL_ENDPOINT =
+  "https://api.elasticemail.com/v4/emails/transactional";
 
 fs.mkdirSync(DATA_DIR, { recursive: true });
 
@@ -122,6 +130,82 @@ function saveLead(lead, req) {
   return record;
 }
 
+function valueOrDash(value) {
+  return value || "-";
+}
+
+async function notifyLeadByEmail(record) {
+  if (!ELASTIC_EMAIL_API_KEY || !ELASTIC_EMAIL_FROM || !ELASTIC_EMAIL_TO) {
+    console.warn(
+      `[EMAIL] Configuracion incompleta; ${record.id} quedo guardado sin notificacion.`
+    );
+    return;
+  }
+
+  const content = [
+    "Nueva solicitud de demostracion de H-OperIA Inmobiliaria",
+    "",
+    `ID: ${record.id}`,
+    `Recibida: ${record.recibidoEn}`,
+    `Nombre: ${record.nombre}`,
+    `Cargo: ${valueOrDash(record.cargo)}`,
+    `Empresa: ${record.empresa}`,
+    `Correo: ${record.email}`,
+    `WhatsApp: ${record.whatsapp}`,
+    `Telefono: ${valueOrDash(record.telefono)}`,
+    `Proyecto(s): ${record.proyectos}`,
+    `Web: ${valueOrDash(record.web)}`,
+    `Que desea gestionar mejor: ${valueOrDash(record.necesidad)}`,
+    `Origen: ${record.origen}`
+  ].join("\n");
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(ELASTIC_EMAIL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-ElasticEmail-ApiKey": ELASTIC_EMAIL_API_KEY
+      },
+      body: JSON.stringify({
+        Recipients: {
+          To: [ELASTIC_EMAIL_TO]
+        },
+        Content: {
+          Body: [
+            {
+              ContentType: "PlainText",
+              Content: content,
+              Charset: "utf-8"
+            }
+          ],
+          From: `${ELASTIC_EMAIL_FROM_NAME} <${ELASTIC_EMAIL_FROM}>`,
+          ReplyTo: record.email,
+          Subject: `Nueva solicitud de demostracion - ${record.empresa}`
+        },
+        Options: {
+          ChannelName: "H-OperIA Solicitud Demo"
+        }
+      }),
+      signal: controller.signal
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `Elastic Email ${response.status}: ${responseText.slice(0, 500)}`
+      );
+    }
+
+    console.log(`[EMAIL] Notificacion enviada | ${record.id}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function serveStatic(req, res) {
   let pathname;
 
@@ -205,6 +289,15 @@ const server = http.createServer(async (req, res) => {
       console.log(
         `[LEAD] ${record.recibidoEn} | ${record.id} | ${record.empresa} | ${record.email}`
       );
+
+      try {
+        await notifyLeadByEmail(record);
+      } catch (emailError) {
+        console.error(
+          `[EMAIL] No fue posible notificar ${record.id}:`,
+          emailError.message
+        );
+      }
 
       sendJson(res, 201, {
         ok: true,
