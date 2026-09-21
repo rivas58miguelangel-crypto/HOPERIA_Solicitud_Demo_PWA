@@ -9,6 +9,9 @@ const __dirname = path.dirname(__filename);
 const PORT = Number(process.env.PORT || 4173);
 const DATA_DIR = path.join(__dirname, "data");
 const LEADS_FILE = path.join(DATA_DIR, "leads.ndjson");
+const EMAIL_TEMPLATE_FILE = path.join(__dirname, "email-confirmacion.html");
+const PUBLIC_BASE_URL =
+  process.env.PUBLIC_BASE_URL || "https://solicitud-demo-01.automatizahoy.ai";
 
 const ELASTIC_EMAIL_API_KEY = process.env.ELASTIC_EMAIL_API_KEY || "";
 const ELASTIC_EMAIL_FROM = process.env.ELASTIC_EMAIL_FROM || "";
@@ -134,6 +137,29 @@ function valueOrDash(value) {
   return value || "-";
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#39;");
+}
+
+function buildProspectHtml(record) {
+  let html = fs.readFileSync(EMAIL_TEMPLATE_FILE, "utf8");
+
+  html = html
+    .replaceAll("{{NOMBRE}}", escapeHtml(record.nombre))
+    .replaceAll("{{LEAD_ID}}", escapeHtml(record.id))
+    .replaceAll(
+      'src="email-assets/',
+      `src="${PUBLIC_BASE_URL}/email-assets/`
+    );
+
+  return html;
+}
+
 async function notifyLeadByEmail(record) {
   if (!ELASTIC_EMAIL_API_KEY || !ELASTIC_EMAIL_FROM || !ELASTIC_EMAIL_TO) {
     console.warn(
@@ -201,6 +227,87 @@ async function notifyLeadByEmail(record) {
     }
 
     console.log(`[EMAIL] Notificacion enviada | ${record.id}`);
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+async function confirmLeadByEmail(record) {
+  if (!ELASTIC_EMAIL_API_KEY || !ELASTIC_EMAIL_FROM) {
+    console.warn(
+      `[EMAIL] Configuracion incompleta; ${record.id} quedo guardado sin confirmacion al prospecto.`
+    );
+    return;
+  }
+
+  const plainText = [
+    `Hola, ${record.nombre}:`,
+    "",
+    "Gracias por su interés en H-OperIA Inmobiliaria.",
+    "",
+    "Hemos recibido correctamente su solicitud de demostración y la información básica sobre su empresa y proyecto.",
+    "",
+    "Revisaremos el contexto que nos ha compartido para preparar una demostración enfocada en sus necesidades.",
+    "",
+    `Referencia de su solicitud: ${record.id}`,
+    "",
+    "Si desea agregar alguna información antes de la demostración, puede responder directamente a este correo.",
+    "",
+    "Miguel Ángel Rivas",
+    "Director · Automatiza Hoy IA",
+    "Tel. / WhatsApp: +503 7576-2213",
+    "marivas@automatizahoy.ai"
+  ].join("\n");
+
+  const htmlContent = buildProspectHtml(record);
+
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+
+  try {
+    const response = await fetch(ELASTIC_EMAIL_ENDPOINT, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "X-ElasticEmail-ApiKey": ELASTIC_EMAIL_API_KEY
+      },
+      body: JSON.stringify({
+        Recipients: {
+          To: [record.email]
+        },
+        Content: {
+          Body: [
+            {
+              ContentType: "HTML",
+              Content: htmlContent,
+              Charset: "utf-8"
+            },
+            {
+              ContentType: "PlainText",
+              Content: plainText,
+              Charset: "utf-8"
+            }
+          ],
+          From: `${ELASTIC_EMAIL_FROM_NAME} <${ELASTIC_EMAIL_FROM}>`,
+          ReplyTo: ELASTIC_EMAIL_TO || ELASTIC_EMAIL_FROM,
+          Subject: "Hemos recibido su solicitud de demostración | H-OperIA Inmobiliaria"
+        },
+        Options: {
+          ChannelName: "H-OperIA Solicitud Demo"
+        }
+      }),
+      signal: controller.signal
+    });
+
+    const responseText = await response.text();
+
+    if (!response.ok) {
+      throw new Error(
+        `Elastic Email ${response.status}: ${responseText.slice(0, 500)}`
+      );
+    }
+
+    console.log(`[EMAIL] Confirmacion enviada al prospecto | ${record.id}`);
   } finally {
     clearTimeout(timeout);
   }
@@ -290,12 +397,22 @@ const server = http.createServer(async (req, res) => {
         `[LEAD] ${record.recibidoEn} | ${record.id} | ${record.empresa} | ${record.email}`
       );
 
-      try {
-        await notifyLeadByEmail(record);
-      } catch (emailError) {
+      const emailResults = await Promise.allSettled([
+        notifyLeadByEmail(record),
+        confirmLeadByEmail(record)
+      ]);
+
+      if (emailResults[0].status === "rejected") {
         console.error(
-          `[EMAIL] No fue posible notificar ${record.id}:`,
-          emailError.message
+          `[EMAIL] No fue posible notificar internamente ${record.id}:`,
+          emailResults[0].reason?.message || emailResults[0].reason
+        );
+      }
+
+      if (emailResults[1].status === "rejected") {
+        console.error(
+          `[EMAIL] No fue posible confirmar al prospecto ${record.id}:`,
+          emailResults[1].reason?.message || emailResults[1].reason
         );
       }
 
